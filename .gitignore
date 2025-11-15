@@ -1,20 +1,21 @@
-# --- FRONTEND (Angular) ---
+operai-backend/credentials.json
+operai-backend/.env
+operai-frontend/.env
+
+# FRONTEND
 operai-frontend/node_modules/
 operai-frontend/dist/
 operai-frontend/.angular/
-operai-frontend/.env
 
-# --- BACKEND (FastAPI o Python) ---
+# BACKEND
 operai-backend/__pycache__/
-operai-backend/.venv/
 operai-backend/venv/
+operai-backend/.venv/
 operai-backend/*.pyc
-operai-backend/.env
-operai-backend/credentials.json
 
-# --- GENERAL ---
+# GENERAL
 .env
 *.log
-.DS_Store
 .vscode/
-.idea/ 
+.idea/
+.DS_Store
