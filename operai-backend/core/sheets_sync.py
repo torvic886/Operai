@@ -1,0 +1,140 @@
+# AGENT/core/sheets_sync.py
+import os
+import logging
+from typing import Dict, Any
+import pandas as pd
+from sqlalchemy import text
+from db.connection import get_engine
+
+logger = logging.getLogger("uvicorn.error")
+
+class GoogleSheetsSync:
+    
+    @staticmethod
+    def export_to_google_sheets(sheet_url: str, sheet_name: str = None) -> Dict[str, Any]:
+        """
+        Exporta TODOS los datos de MySQL a Google Sheets
+        """
+        try:
+            import gspread
+            from oauth2client.service_account import ServiceAccountCredentials
+            
+            # Configurar credenciales
+            scope = ['https://spreadsheets.google.com/feeds',
+                     'https://www.googleapis.com/auth/drive']
+            
+            creds_path = os.getenv('GOOGLE_SHEETS_CREDENTIALS', 'credentials.json')
+            
+            if not os.path.exists(creds_path):
+                return {
+                    "success": False,
+                    "error": "Archivo de credenciales de Google no encontrado. Por favor configura credentials.json",
+                    "rows_exported": 0
+                }
+            
+            logger.info("📊 Obteniendo TODOS los registros de MySQL...")
+            
+            # Obtener TODOS los datos de MySQL
+            engine = get_engine()
+            query = """
+                SELECT CODIGO, FECHA, CATEGORIA, CODIGO_LETRA, CODIGO_NUM,
+                       NOMBRE_PRODUCTO, TIPO, VALOR, CANTIDAD
+                FROM gastos
+                ORDER BY FECHA DESC, id DESC
+            """
+            
+            df = pd.read_sql(query, engine)
+            total_rows = len(df)
+            logger.info(f"✅ {total_rows} registros obtenidos de MySQL")
+            
+            if total_rows == 0:
+                return {
+                    "success": False,
+                    "error": "No hay datos para exportar en la base de datos",
+                    "rows_exported": 0
+                }
+            
+            # Conectar a Google Sheets
+            logger.info("🔐 Conectando a Google Sheets...")
+            creds = ServiceAccountCredentials.from_json_keyfile_name(creds_path, scope)
+            client = gspread.authorize(creds)
+            
+            # Abrir la hoja
+            logger.info(f"📄 Abriendo hoja: {sheet_url}")
+            sheet = client.open_by_url(sheet_url)
+            worksheet = sheet.worksheet(sheet_name) if sheet_name else sheet.get_worksheet(0)
+            
+            # Limpiar la hoja completamente
+            logger.info("🧹 Limpiando hoja existente...")
+            worksheet.clear()
+            
+            # Preparar datos para exportación
+            # Encabezados
+            headers = df.columns.tolist()
+            
+            # Convertir DataFrame a lista de listas
+            data = df.values.tolist()
+            
+            # Convertir valores a string para evitar problemas de formato
+            data_str = []
+            for row in data:
+                row_str = [str(val) if val is not None and not pd.isna(val) else '' for val in row]
+                data_str.append(row_str)
+            
+            # Crear tabla completa (encabezados + datos)
+            all_data = [headers] + data_str
+            
+            logger.info(f"📤 Exportando {total_rows} registros a Google Sheets...")
+            
+            # Exportar TODO de una vez (más eficiente que fila por fila)
+            worksheet.update('A1', all_data, value_input_option='USER_ENTERED')
+            
+            # Formatear encabezados (opcional pero se ve bonito)
+            try:
+                worksheet.format('A1:I1', {
+                    "backgroundColor": {"red": 0.08, "green": 0.72, "blue": 0.65},
+                    "textFormat": {
+                        "foregroundColor": {"red": 1, "green": 1, "blue": 1},
+                        "bold": True
+                    },
+                    "horizontalAlignment": "CENTER"
+                })
+                
+                # Congelar primera fila
+                worksheet.freeze(rows=1)
+                
+                logger.info("🎨 Formato aplicado correctamente")
+            except Exception as format_error:
+                logger.warning(f"⚠️ No se pudo aplicar formato: {format_error}")
+            
+            logger.info(f"✅ {total_rows} registros exportados exitosamente")
+            
+            return {
+                "success": True,
+                "message": f"Todos los registros ({total_rows}) exportados exitosamente",
+                "rows_exported": total_rows,
+                "sheet_url": sheet_url,
+                "sheet_name": worksheet.title
+            }
+            
+        except gspread.exceptions.SpreadsheetNotFound:
+            logger.error("❌ Hoja de cálculo no encontrada")
+            return {
+                "success": False,
+                "error": "No se encontró la hoja de Google Sheets. Verifica que la URL sea correcta y que tengas permisos de edición.",
+                "rows_exported": 0
+            }
+        except gspread.exceptions.APIError as e:
+            logger.error(f"❌ Error de API de Google: {e}")
+            return {
+                "success": False,
+                "error": f"Error de API de Google Sheets: {str(e)}. Verifica que las credenciales tengan permisos suficientes.",
+                "rows_exported": 0
+            }
+        except Exception as e:
+            logger.exception("❌ Error exportando a Google Sheets")
+            return {
+                "success": False,
+                "error": f"Error inesperado: {str(e)}",
+                "rows_exported": 0
+            }
