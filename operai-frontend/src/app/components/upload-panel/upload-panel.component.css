@@ -306,3 +306,81 @@
     opacity: 1;
     }
 }
+
+.stat-detail {
+  font-size: 0.75rem;
+  color: #6b7280;
+  margin-top: 4px;
+}
+
+.import-history {
+  margin-top: 24px;
+}
+
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.history-item {
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+  background-color: white;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+}
+
+.history-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.history-icon.success {
+  background-color: #d1fae5;
+  color: #059669;
+}
+
+.history-icon.error {
+  background-color: #fee2e2;
+  color: #dc2626;
+}
+
+.history-info {
+  flex: 1;
+}
+
+.history-date {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 4px;
+}
+
+.history-details {
+  font-size: 0.75rem;
+  color: #6b7280;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.history-source {
+  font-weight: 500;
+  color: #14b8a6;
+}
+
+.history-separator {
+  color: #d1d5db;
+}
+
+.history-filename {
+  font-style: italic;
+}

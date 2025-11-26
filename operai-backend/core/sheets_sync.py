@@ -5,16 +5,44 @@ from typing import Dict, Any
 import pandas as pd
 from sqlalchemy import text
 from db.connection import get_engine
+from datetime import datetime
 
 logger = logging.getLogger("uvicorn.error")
 
 class GoogleSheetsSync:
     
     @staticmethod
+    def _log_export(engine, rows: int, sheet_url: str, status: str = "SUCCESS", error: str = None):
+        """
+        Registra un log de exportación en la base de datos
+        """
+        try:
+            with engine.begin() as conn:
+                conn.execute(
+                    text("""
+                        INSERT INTO import_logs 
+                        (source, rows_imported, filename, status, error_message) 
+                        VALUES (:source, :rows, :filename, :status, :error)
+                    """),
+                    {
+                        "source": "Google Sheets Export",
+                        "rows": rows,
+                        "filename": sheet_url,
+                        "status": status,
+                        "error": error
+                    }
+                )
+            logger.info(f"📝 Log de exportación registrado: {rows} filas")
+        except Exception as e:
+            logger.error(f"❌ Error al registrar log de exportación: {e}")
+    
+    @staticmethod
     def export_to_google_sheets(sheet_url: str, sheet_name: str = None) -> Dict[str, Any]:
         """
         Exporta TODOS los datos de MySQL a Google Sheets
         """
+        engine = get_engine()
+        
         try:
             import gspread
             from oauth2client.service_account import ServiceAccountCredentials
@@ -26,16 +54,17 @@ class GoogleSheetsSync:
             creds_path = os.getenv('GOOGLE_SHEETS_CREDENTIALS', 'credentials.json')
             
             if not os.path.exists(creds_path):
+                error_msg = "Archivo de credenciales de Google no encontrado. Por favor configura credentials.json"
+                GoogleSheetsSync._log_export(engine, 0, sheet_url, "ERROR", error_msg)
                 return {
                     "success": False,
-                    "error": "Archivo de credenciales de Google no encontrado. Por favor configura credentials.json",
+                    "error": error_msg,
                     "rows_exported": 0
                 }
             
             logger.info("📊 Obteniendo TODOS los registros de MySQL...")
             
             # Obtener TODOS los datos de MySQL
-            engine = get_engine()
             query = """
                 SELECT CODIGO, FECHA, CATEGORIA, CODIGO_LETRA, CODIGO_NUM,
                        NOMBRE_PRODUCTO, TIPO, VALOR, CANTIDAD
@@ -48,9 +77,11 @@ class GoogleSheetsSync:
             logger.info(f"✅ {total_rows} registros obtenidos de MySQL")
             
             if total_rows == 0:
+                error_msg = "No hay datos para exportar en la base de datos"
+                GoogleSheetsSync._log_export(engine, 0, sheet_url, "ERROR", error_msg)
                 return {
                     "success": False,
-                    "error": "No hay datos para exportar en la base de datos",
+                    "error": error_msg,
                     "rows_exported": 0
                 }
             
@@ -62,17 +93,26 @@ class GoogleSheetsSync:
             # Abrir la hoja
             logger.info(f"📄 Abriendo hoja: {sheet_url}")
             sheet = client.open_by_url(sheet_url)
-            worksheet = sheet.worksheet(sheet_name) if sheet_name else sheet.get_worksheet(0)
+            
+            # Obtener o crear la worksheet
+            try:
+                if sheet_name:
+                    worksheet = sheet.worksheet(sheet_name)
+                    logger.info(f"✅ Hoja '{sheet_name}' encontrada")
+                else:
+                    worksheet = sheet.get_worksheet(0)
+                    logger.info(f"✅ Usando primera hoja: '{worksheet.title}'")
+            except Exception as e:
+                logger.info(f"⚠️ Hoja no encontrada, creando nueva...")
+                worksheet = sheet.add_worksheet(title=sheet_name or "Gastos", rows="1000", cols="20")
+                logger.info(f"✅ Hoja '{worksheet.title}' creada")
             
             # Limpiar la hoja completamente
             logger.info("🧹 Limpiando hoja existente...")
             worksheet.clear()
             
             # Preparar datos para exportación
-            # Encabezados
             headers = df.columns.tolist()
-            
-            # Convertir DataFrame a lista de listas
             data = df.values.tolist()
             
             # Convertir valores a string para evitar problemas de formato
@@ -109,32 +149,42 @@ class GoogleSheetsSync:
             
             logger.info(f"✅ {total_rows} registros exportados exitosamente")
             
+            # 🔥 AGREGAR LOG DE EXPORTACIÓN - ESTO ES LO QUE FALTABA
+            GoogleSheetsSync._log_export(engine, total_rows, sheet_url, "SUCCESS", None)
+            
             return {
                 "success": True,
                 "message": f"Todos los registros ({total_rows}) exportados exitosamente",
                 "rows_exported": total_rows,
                 "sheet_url": sheet_url,
-                "sheet_name": worksheet.title
+                "sheet_name": worksheet.title,
+                "timestamp": datetime.now().isoformat()
             }
             
         except gspread.exceptions.SpreadsheetNotFound:
             logger.error("❌ Hoja de cálculo no encontrada")
+            error_msg = "No se encontró la hoja de Google Sheets. Verifica que la URL sea correcta y que tengas permisos de edición."
+            GoogleSheetsSync._log_export(engine, 0, sheet_url, "ERROR", error_msg)
             return {
                 "success": False,
-                "error": "No se encontró la hoja de Google Sheets. Verifica que la URL sea correcta y que tengas permisos de edición.",
+                "error": error_msg,
                 "rows_exported": 0
             }
         except gspread.exceptions.APIError as e:
             logger.error(f"❌ Error de API de Google: {e}")
+            error_msg = f"Error de API de Google Sheets: {str(e)}. Verifica que las credenciales tengan permisos suficientes."
+            GoogleSheetsSync._log_export(engine, 0, sheet_url, "ERROR", error_msg)
             return {
                 "success": False,
-                "error": f"Error de API de Google Sheets: {str(e)}. Verifica que las credenciales tengan permisos suficientes.",
+                "error": error_msg,
                 "rows_exported": 0
             }
         except Exception as e:
             logger.exception("❌ Error exportando a Google Sheets")
+            error_msg = f"Error inesperado: {str(e)}"
+            GoogleSheetsSync._log_export(engine, 0, sheet_url, "ERROR", error_msg)
             return {
                 "success": False,
-                "error": f"Error inesperado: {str(e)}",
+                "error": error_msg,
                 "rows_exported": 0
             }

@@ -8,6 +8,32 @@ from pydantic import BaseModel
 from dotenv import load_dotenv
 from google import genai
 from google.genai import types
+import locale
+
+# ---------------------------
+# CONFIGURAR FORMATO COLOMBIANO
+# ---------------------------
+try:
+    locale.setlocale(locale.LC_ALL, "es_CO.UTF-8")
+except:
+    # Fallback si el servidor no tiene el locale
+    locale.setlocale(locale.LC_ALL, "")
+
+def money(value: float) -> str:
+    """
+    Formatea números como dinero colombiano:
+    1234567.89 → 1.234.568
+    -6937500 → -6.937.500
+    """
+    try:
+        return locale.format_string("%d", value, grouping=True)
+    except:
+        # Fallback manual
+        return f"{int(value):,}".replace(",", ".")
+
+# ---------------------------
+# CARGA API KEY
+# ---------------------------
 
 load_dotenv()
 
@@ -83,32 +109,63 @@ def chat_endpoint(payload: ChatIn):
 
     tool = plan.get("tool", "none")
     params = plan.get("params", {}) or {}
+
+
     logger.debug(f"Plan recibido: tool={tool}, params={params}")
 
     try:
+        # -----------------------------------------
+        # PROMEDIO CATEGORÍA
+        # -----------------------------------------
         if tool == "promedio_categoria":
             data = call_api("/api/tools/promedio_categoria", params)
             return {
-                "reply": f"Promedio: {round(data['monto_promedio'], 2)} sobre {data['cantidad_registros']} registros.",
+                "reply": (
+                    f"Promedio: ${money(data['monto_promedio'])} "
+                    f"en {data['cantidad_registros']} registros."
+                ),
                 "data": data
             }
+        # -----------------------------------------
+        # BUSCAR POR CATEGORÍA
+        # -----------------------------------------
         elif tool == "buscar_por_categoria":
             data = call_api("/api/tools/buscar_por_categoria", params)
             return {
-                "reply": f"{data['cantidad_registros']} registros. Total: {round(data['monto_total'],2)}. Muestro una muestra.",
-                "data": {"lista_registros": data["lista_registros"][:5], "monto_total": data["monto_total"]}
+                "reply": (
+                    f"{data['cantidad_registros']} registros. "
+                    f"Total: ${money(data['monto_total'])}. Muestro una muestra."
+                ),
+                "data": {
+                    "lista_registros": data["lista_registros"][:5],
+                    "monto_total": data["monto_total"]
+                }
             }
+        # -----------------------------------------
+        # PRESUPUESTO RESTANTE
+        # -----------------------------------------
         elif tool == "presupuesto_restante":
             data = call_api("/api/tools/presupuesto_restante", params)
             return {
-                "reply": f"Asignado: {round(data['presupuesto_asignado'],2)}; Ejecutado: {round(data['monto_ejecutado'],2)}; Restante: {round(data['restante'],2)}; Uso: {round(data['porcentaje_usado'],2)}%.",
+                "reply": (
+                    f"Asignado: ${money(data['presupuesto_asignado'])}; "
+                    f"Ejecutado: ${money(data['monto_ejecutado'])}; "
+                    f"Restante: ${money(data['restante'])}; "
+                    f"Uso: {round(data['porcentaje_usado'],2)}%."
+                ),
                 "data": data
             }
+        # -----------------------------------------
+        # TOTAL CATEGORÍA VALOR
+        # -----------------------------------------
         elif tool == "total_categoria_valor":
-            logger.debug(f"Llamando herramienta total_categoria_valor con params: {params}")
             data = call_api("/api/tools/total_categoria_valor", params)
             return {
-                "reply": f"Total: {round(data['monto_total'],2)} en {data['cantidad_registros']} registros. Promedio: {round(data['promedio'],2)}.",
+                "reply": (
+                    f"Total: ${money(data['monto_total'])} "
+                    f"en {data['cantidad_registros']} registros. "
+                    f"Promedio: ${money(data['promedio'])}."
+                ),
                 "data": {
                     "stats": {
                         "monto_total": data["monto_total"],
@@ -120,8 +177,10 @@ def chat_endpoint(payload: ChatIn):
                     "muestra": data.get("lista_registros", [])[:5]
                 }
             }
+
         else:
             return {"reply": plan.get("reply", "No entendí, ¿puedes reformular?")}
+
     except HTTPException as he:
         raise he
     except Exception as e:

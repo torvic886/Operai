@@ -185,7 +185,7 @@ def create_app() -> FastAPI:
     @app.get("/api/upload/stats")
     def get_upload_stats():
         """
-        Obtiene estadísticas de la base de datos
+        Obtiene estadísticas de la base de datos incluyendo logs de importación
         """
         try:
             engine = get_engine()
@@ -202,19 +202,60 @@ def create_app() -> FastAPI:
                 """))
                 by_category = [{"categoria": row[0], "count": row[1]} for row in result]
                 
-                # Último registro
+                # Última importación
                 result = conn.execute(text("""
-                    SELECT MAX(FECHA) as last_date FROM gastos
+                    SELECT import_date, source, rows_imported, filename, status
+                    FROM import_logs 
+                    ORDER BY import_date DESC 
+                    LIMIT 1
                 """))
-                last_date = result.scalar()
+                last_import = result.fetchone()
+                
+                # Total importado
+                result = conn.execute(text("""
+                    SELECT SUM(rows_imported) as total_imported,
+                        COUNT(*) as total_imports
+                    FROM import_logs
+                    WHERE status = 'SUCCESS'
+                """))
+                import_stats = result.fetchone()
+                
+                # Historial de importaciones recientes (últimas 10)
+                result = conn.execute(text("""
+                    SELECT import_date, source, rows_imported, filename, status
+                    FROM import_logs
+                    ORDER BY import_date DESC
+                    LIMIT 10
+                """))
+                import_history = []
+                for row in result:
+                    import_history.append({
+                        "date": row[0].isoformat() if row[0] else None,
+                        "source": row[1],
+                        "rows": row[2],
+                        "filename": row[3],
+                        "status": row[4]
+                    })
                 
             return {
                 "total_records": total,
                 "by_category": by_category,
-                "last_upload_date": last_date.isoformat() if last_date else None
+                "last_import": {
+                    "date": last_import[0].isoformat() if last_import and last_import[0] else None,
+                    "source": last_import[1] if last_import else None,
+                    "rows": last_import[2] if last_import else 0,
+                    "filename": last_import[3] if last_import else None,
+                    "status": last_import[4] if last_import else None
+                } if last_import else None,
+                "import_stats": {
+                    "total_imported": import_stats[0] or 0,
+                    "total_imports": import_stats[1] or 0
+                } if import_stats else None,
+                "import_history": import_history
             }
             
         except Exception as e:
+            logger.exception("Error obteniendo estadísticas")
             raise HTTPException(status_code=500, detail=str(e))        
 
     # ======================= HEALTH CHECK ============================

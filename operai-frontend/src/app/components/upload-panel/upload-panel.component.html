@@ -114,56 +114,84 @@
 
     <!-- Stats -->
     <div class="stats-section" *ngIf="stats">
-        <h3 class="section-title">Estadísticas de la Base de Datos</h3>
-        <div class="stats-grid">
-            <div class="stat-card">
-                <div class="stat-icon">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2">
-                        <path d="M3 3v18h18"></path>
-                        <path d="M18 17V9"></path>
-                        <path d="M13 17V5"></path>
-                        <path d="M8 17v-3"></path>
-                    </svg>
-                </div>
-                <div class="stat-value">{{ stats.total_records | number }}</div>
-                <div class="stat-label">Total registros</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-icon">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2">
-                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                        <line x1="9" y1="9" x2="15" y2="9"></line>
-                        <line x1="9" y1="15" x2="15" y2="15"></line>
-                    </svg>
-                </div>
-                <div class="stat-value">{{ stats.by_category?.length || 0 }}</div>
-                <div class="stat-label">Categorías</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-icon">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2">
-                        <circle cx="12" cy="12" r="10"></circle>
-                        <polyline points="12 6 12 12 16 14"></polyline>
-                    </svg>
-                </div>
-                <div class="stat-value">{{ stats.last_upload_date | date:'short' }}</div>
-                <div class="stat-label">Última actualización</div>
-            </div>
+    <h3 class="section-title">Estadísticas de la Base de Datos</h3>
+    <div class="stats-grid">
+        <div class="stat-card">
+        <div class="stat-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 3v18h18"></path>
+            <path d="M18 17V9"></path>
+            <path d="M13 17V5"></path>
+            <path d="M8 17v-3"></path>
+            </svg>
         </div>
+        <div class="stat-value">{{ stats.total_records | number }}</div>
+        <div class="stat-label">Total registros</div>
+        </div>
+        <div class="stat-card">
+        <div class="stat-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+            <line x1="9" y1="9" x2="15" y2="9"></line>
+            <line x1="9" y1="15" x2="15" y2="15"></line>
+            </svg>
+        </div>
+        <div class="stat-value">{{ stats.by_category?.length || 0 }}</div>
+        <div class="stat-label">Categorías</div>
+        </div>
+        <div class="stat-card" *ngIf="stats.last_import">
+        <div class="stat-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+        </div>
+        <div class="stat-value">{{ stats.last_import.date | date:'short' }}</div>
+        <div class="stat-label">Última carga</div>
+        <div class="stat-detail">
+            {{ stats.last_import.source }} - {{ stats.last_import.rows | number }} registros
+        </div>
+        </div>
+    </div>
 
-        <!-- Top Categories -->
-        <div class="top-categories" *ngIf="stats.by_category && stats.by_category.length > 0">
-            <h4 class="subsection-title">Top 5 Categorías</h4>
-            <div class="category-list">
-                <div class="category-item" *ngFor="let cat of stats.by_category.slice(0, 5)">
-                    <span class="category-name">{{ cat.categoria }}</span>
-                    <span class="category-count">{{ cat.count | number }} registros</span>
-                </div>
+    <!-- Top Categories -->
+    <div class="top-categories" *ngIf="stats.by_category && stats.by_category.length > 0">
+        <h4 class="subsection-title">Top 5 Categorías</h4>
+        <div class="category-list">
+        <div class="category-item" *ngFor="let cat of stats.by_category.slice(0, 5)">
+            <span class="category-name">{{ cat.categoria }}</span>
+            <span class="category-count">{{ cat.count | number }} registros</span>
+        </div>
+        </div>
+    </div>
+
+    <!-- Import History -->
+    <div class="import-history" *ngIf="stats.import_history && stats.import_history.length > 0">
+        <h4 class="subsection-title">Historial de Cargas (Últimas 10)</h4>
+        <div class="history-list">
+        <div class="history-item" *ngFor="let item of stats.import_history">
+            <div class="history-icon" [class.success]="item.status === 'SUCCESS'" [class.error]="item.status === 'ERROR'">
+            <svg *ngIf="item.status === 'SUCCESS'" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+            <svg *ngIf="item.status === 'ERROR'" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="15" y1="9" x2="9" y2="15"></line>
+                <line x1="9" y1="9" x2="15" y2="15"></line>
+            </svg>
+            </div>
+            <div class="history-info">
+            <div class="history-date">{{ item.date | date:'short' }}</div>
+            <div class="history-details">
+                <span class="history-source">{{ item.source }}</span>
+                <span class="history-separator">•</span>
+                <span class="history-rows">{{ item.rows | number }} registros</span>
+                <span class="history-filename" *ngIf="item.filename">• {{ item.filename }}</span>
+            </div>
             </div>
         </div>
+        </div>
+    </div>
     </div>
 
     <!-- Notification -->

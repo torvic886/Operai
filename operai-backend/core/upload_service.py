@@ -12,10 +12,37 @@ logger = logging.getLogger("uvicorn.error")
 class UploadService:
     
     @staticmethod
+    def _log_import(engine, source: str, rows: int, filename: str = None, 
+                   status: str = "SUCCESS", error: str = None):
+        """
+        Registra un log de importación en la base de datos
+        """
+        try:
+            with engine.begin() as conn:
+                conn.execute(
+                    text("""
+                        INSERT INTO import_logs 
+                        (source, rows_imported, filename, status, error_message) 
+                        VALUES (:source, :rows, :filename, :status, :error)
+                    """),
+                    {
+                        "source": source,
+                        "rows": rows,
+                        "filename": filename,
+                        "status": status,
+                        "error": error
+                    }
+                )
+                logger.info(f"📝 Log de importación registrado: {source} - {rows} filas")
+        except Exception as e:
+            logger.error(f"❌ Error al registrar log: {e}")
+    
+    @staticmethod
     def process_csv_file(file_content: bytes, filename: str) -> Dict[str, Any]:
         """
         Procesa un archivo CSV y lo carga a la base de datos
         """
+        engine = get_engine()
         try:
             # Leer CSV desde bytes
             from io import BytesIO
@@ -34,9 +61,11 @@ class UploadService:
             missing_columns = [col for col in required_columns if col not in df.columns]
             
             if missing_columns:
+                error_msg = f"Faltan columnas requeridas: {missing_columns}"
+                UploadService._log_import(engine, "CSV", 0, filename, "ERROR", error_msg)
                 return {
                     "success": False,
-                    "error": f"Faltan columnas requeridas: {missing_columns}",
+                    "error": error_msg,
                     "rows_processed": 0
                 }
             
@@ -46,6 +75,7 @@ class UploadService:
             # Validar datos
             validation_result = UploadService._validate_dataframe(df)
             if not validation_result["valid"]:
+                UploadService._log_import(engine, "CSV", 0, filename, "ERROR", validation_result["error"])
                 return {
                     "success": False,
                     "error": validation_result["error"],
@@ -53,8 +83,10 @@ class UploadService:
                 }
             
             # Insertar en base de datos
-            engine = get_engine()
             rows_inserted = UploadService._insert_to_database(df, engine)
+            
+            # Registrar log exitoso
+            UploadService._log_import(engine, "CSV", rows_inserted, filename, "SUCCESS")
             
             return {
                 "success": True,
@@ -66,6 +98,7 @@ class UploadService:
             
         except Exception as e:
             logger.exception("Error procesando CSV")
+            UploadService._log_import(engine, "CSV", 0, filename, "ERROR", str(e))
             return {
                 "success": False,
                 "error": str(e),
@@ -81,7 +114,7 @@ class UploadService:
         df['FECHA'] = pd.to_datetime(df['FECHA'], format='%Y-%m-%d', errors='coerce')
         df['FECHA'] = df['FECHA'].dt.strftime('%Y-%m-%d')
         
-        # Limpiar VALOR: eliminar puntos de miles y comas decimales
+        # Limpiar VALOR
         df['VALOR'] = (
             df['VALOR']
             .str.replace('.', '', regex=False)
@@ -100,13 +133,13 @@ class UploadService:
         # Convertir TIPO a entero
         df['TIPO'] = df['TIPO'].astype(int)
         
-        # Convertir CODIGO_NUM a entero (puede tener valores muy grandes)
+        # Convertir CODIGO_NUM a entero
         df['CODIGO_NUM'] = pd.to_numeric(df['CODIGO_NUM'], errors='coerce').fillna(0).astype('int64')
         
-        # Normalizar CATEGORIA a mayúsculas
+        # Normalizar CATEGORIA
         df['CATEGORIA'] = df['CATEGORIA'].str.upper().str.strip()
         
-        # Limpiar espacios en NOMBRE_PRODUCTO y CODIGO
+        # Limpiar espacios
         df['NOMBRE_PRODUCTO'] = df['NOMBRE_PRODUCTO'].str.strip()
         df['CODIGO'] = df['CODIGO'].str.strip()
         df['CODIGO_LETRA'] = df['CODIGO_LETRA'].str.strip().str.upper()
@@ -118,39 +151,20 @@ class UploadService:
         """
         Valida que los datos sean correctos
         """
-        # Verificar fechas nulas
         if df['FECHA'].isna().any():
-            return {
-                "valid": False,
-                "error": "Hay fechas inválidas en el archivo"
-            }
+            return {"valid": False, "error": "Hay fechas inválidas en el archivo"}
         
-        # Verificar valores negativos
         if (df['VALOR'] < 0).any():
-            return {
-                "valid": False,
-                "error": "Hay valores negativos en VALOR"
-            }
+            return {"valid": False, "error": "Hay valores negativos en VALOR"}
         
         if (df['CANTIDAD'] < 0).any():
-            return {
-                "valid": False,
-                "error": "Hay cantidades negativas"
-            }
+            return {"valid": False, "error": "Hay cantidades negativas"}
         
-        # Verificar categorías vacías
         if df['CATEGORIA'].isna().any() or (df['CATEGORIA'] == '').any():
-            return {
-                "valid": False,
-                "error": "Hay categorías vacías"
-            }
+            return {"valid": False, "error": "Hay categorías vacías"}
         
-        # Verificar CODIGO vacío
         if df['CODIGO'].isna().any() or (df['CODIGO'] == '').any():
-            return {
-                "valid": False,
-                "error": "Hay códigos vacíos"
-            }
+            return {"valid": False, "error": "Hay códigos vacíos"}
         
         return {"valid": True}
     
@@ -164,8 +178,7 @@ class UploadService:
             result = conn.execute(text("SELECT COUNT(*) as count FROM gastos"))
             rows_before = result.scalar()
         
-        # Asegurarse de que las columnas estén en el orden correcto
-        # y que no incluya el campo 'id' (auto-increment)
+        # Orden de columnas
         columns_order = ['CODIGO', 'FECHA', 'CATEGORIA', 'CODIGO_LETRA', 'CODIGO_NUM',
                         'NOMBRE_PRODUCTO', 'TIPO', 'VALOR', 'CANTIDAD']
         
@@ -192,47 +205,49 @@ class UploadService:
         """
         Sincroniza datos desde Google Sheets
         """
+        engine = get_engine()
         try:
             import gspread
             from oauth2client.service_account import ServiceAccountCredentials
             
-            # Configurar credenciales
             scope = ['https://spreadsheets.google.com/feeds',
                      'https://www.googleapis.com/auth/drive']
             
             creds_path = os.getenv('GOOGLE_SHEETS_CREDENTIALS', 'credentials.json')
             
             if not os.path.exists(creds_path):
+                error_msg = "Archivo de credenciales de Google no encontrado"
+                UploadService._log_import(engine, "Google Sheets", 0, sheet_url, "ERROR", error_msg)
                 return {
                     "success": False,
-                    "error": "Archivo de credenciales de Google no encontrado",
+                    "error": error_msg,
                     "rows_processed": 0
                 }
             
             creds = ServiceAccountCredentials.from_json_keyfile_name(creds_path, scope)
             client = gspread.authorize(creds)
             
-            # Abrir la hoja
             sheet = client.open_by_url(sheet_url)
             worksheet = sheet.worksheet(sheet_name) if sheet_name else sheet.get_worksheet(0)
             
-            # Convertir a DataFrame
             data = worksheet.get_all_records()
             df = pd.DataFrame(data)
             
-            # Procesar como CSV
             df = UploadService._clean_dataframe(df)
             validation_result = UploadService._validate_dataframe(df)
             
             if not validation_result["valid"]:
+                UploadService._log_import(engine, "Google Sheets", 0, sheet_url, "ERROR", validation_result["error"])
                 return {
                     "success": False,
                     "error": validation_result["error"],
                     "rows_processed": 0
                 }
             
-            engine = get_engine()
             rows_inserted = UploadService._insert_to_database(df, engine)
+            
+            # Registrar log exitoso
+            UploadService._log_import(engine, "Google Sheets", rows_inserted, sheet_url, "SUCCESS")
             
             return {
                 "success": True,
@@ -243,6 +258,7 @@ class UploadService:
             
         except Exception as e:
             logger.exception("Error sincronizando Google Sheets")
+            UploadService._log_import(engine, "Google Sheets", 0, sheet_url, "ERROR", str(e))
             return {
                 "success": False,
                 "error": str(e),
