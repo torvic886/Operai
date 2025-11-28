@@ -5,7 +5,7 @@ from typing import Dict, Any
 import pandas as pd
 from sqlalchemy import text
 from db.connection import get_engine
-from datetime import datetime
+from datetime import datetime, date
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -116,9 +116,29 @@ class GoogleSheetsSync:
             data = df.values.tolist()
             
             # Convertir valores a string para evitar problemas de formato
+            # Convertir valores con la lógica correcta para evitar problemas de formato
             data_str = []
             for row in data:
-                row_str = [str(val) if val is not None and not pd.isna(val) else '' for val in row]
+                row_str = []
+                for val in row:
+                    # 1. Manejar None y NaN
+                    if val is None or pd.isna(val):
+                        row_str.append('')
+                    # 2. Manejar fechas (pd.Timestamp, datetime, date)
+                    elif isinstance(val, (pd.Timestamp, datetime, date)):
+                        row_str.append(val.strftime("%Y-%m-%d"))
+                    # 3. Manejar floats
+                    elif isinstance(val, float):
+                        if val.is_integer():
+                            # Float entero: 8000.0 → "8000"
+                            row_str.append(str(int(val)))
+                        else:
+                            # Float con decimales: redondear a 2 decimales
+                            row_str.append(str(round(val, 2)))
+                    # 4. Todo lo demás (strings, ints, etc.)
+                    else:
+                        row_str.append(str(val))
+                
                 data_str.append(row_str)
             
             # Crear tabla completa (encabezados + datos)

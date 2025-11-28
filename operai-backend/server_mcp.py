@@ -46,6 +46,14 @@ def _productos_caros(params: Dict[str, Any]) -> list[Dict[str, Any]]:
     limit = params.get("limit", 10)
     return repositories.get_productos_caros(limit)
 
+@tool("productos_caros_categoria")
+def _productos_caros_categoria(params: Dict[str, Any]) -> list[Dict[str, Any]]:
+    return repositories.get_productos_caros_categoria(
+        categoria=params["categoria"],
+        fecha_inicio=params["fecha_inicio"],
+        fecha_fin=params["fecha_fin"],
+        limit=params.get("limit", 10)
+    )
 # -------------------------
 # NUEVA HERRAMIENTA: total_categoria_valor
 # -------------------------
@@ -59,6 +67,7 @@ def _total_categoria_valor(params: Dict[str, Any]) -> Dict[str, Any]:
         max_valor=params.get("max_valor"),
         limit=params.get("limit")
     )
+
 
 def call_tool(name: str, params: Dict[str, Any]) -> Any:
     if name not in TOOLS:

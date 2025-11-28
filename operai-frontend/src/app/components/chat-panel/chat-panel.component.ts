@@ -22,10 +22,10 @@ export class ChatPanelComponent implements OnInit {
 
   exampleQuestions = [
     '¿Cuánto gastamos en BONO CLIENTE en octubre 2025?',
-    'Muéstrame el promedio de gastos en CAFETERIA',
-    '¿Cuál es el presupuesto restante de ADMINISTRATIVOS?',
-    'Dame los productos más caros',
-    'Total de gastos en ASEO del último mes'
+    '¿Cuál es el promedio de gastos para la categoría CAFETERIA entre 2025-01-01 y 2025-10-31?',
+    '¿¿Cuál es el presupuesto restante para la categoría ADMINISTRATIVOS para el periodo 2025-10??',
+    'Dame los productos más caros de Cafetería entre 2025-01-01 y 2025-01-31',
+    'Total de gastos en ASEO de enero de 2025'
   ];
 
   constructor(private gastosService: GastosService) {}

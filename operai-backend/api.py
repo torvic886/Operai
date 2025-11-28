@@ -287,6 +287,14 @@ def create_app() -> FastAPI:
             raise HTTPException(status_code=500, detail=f"Error interno: {e}")
 
 
+    @app.get("/api/tools/productos_caros_categoria")
+    def productos_caros_categoria_get(categoria: str, fecha_inicio: str, fecha_fin: str, limit: int = 10):
+        try:
+            return services.productos_caros_categoria(categoria, fecha_inicio, fecha_fin, limit)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Error interno: {e}")
+
+
     @app.get("/api/tools/presupuesto_restante")
     def presupuesto_restante_get(categoria: str, periodo: str, permitir_sin_presupuesto: bool = False):
         try:

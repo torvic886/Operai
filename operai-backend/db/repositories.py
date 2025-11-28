@@ -77,38 +77,45 @@ def buscar_por_categoria(categoria: str, fecha_inicio: str, fecha_fin: str, prov
 
 def get_presupuesto_restante(categoria: str, periodo: str) -> Dict[str, Any]:
     """
-    Calcula presupuesto del mes `periodo` (YYYY-MM) y ejecutado en `gastos`.
+    Calcula presupuesto anual para la categoría y ejecutado acumulado del año.
     Si NO existe fila en 'presupuestos', usa presupuesto_asignado=0.0.
     """
     # 1) Rango de fechas del mes
     y, m = map(int, periodo.split("-"))
-    ini = date(y, m, 1)
-    fin = date(y, m, monthrange(y, m)[1])
+    anio = y  # aquí nace el valor que se usa en :anio
 
-    # 2) Presupuesto mensual (puede no existir)
-    q_ppto = text("""
+    ini = date(anio, m, 1)
+    fin = date(anio, m, monthrange(anio, m)[1])
+    periodo_real = fin.isoformat()   # 2025-10 → 2025-10-31
+
+    # 2) Presupuesto (último día del mes)
+    q_ppto = text(""" 
         SELECT MONTO_ASIGNADO AS presupuesto_asignado
         FROM presupuestos
-        WHERE CATEGORIA = :categoria AND PERIODO = :periodo
+        WHERE UPPER(CATEGORIA) = UPPER(:categoria)
+          AND PERIODO = :periodo_real
         LIMIT 1
     """)
 
-    # 3) Ejecutado del mes
+    # 3) Ejecutado del AÑO
     q_exec = text("""
         SELECT COALESCE(SUM(VALOR), 0) AS ejecutado
         FROM gastos
         WHERE CATEGORIA = :categoria
-          AND FECHA BETWEEN :ini AND :fin
+          AND YEAR(FECHA) = :anio
     """)
 
     eng = get_engine()
     with eng.connect() as conn:
-        # Puede ser None si la tabla no tiene esa categoría/periodo
-        p = conn.execute(q_ppto, {"categoria": categoria, "periodo": periodo}).mappings().first()
+        p = conn.execute(
+            q_ppto,
+            {"categoria": categoria, "periodo_real": periodo_real}
+        ).mappings().first()
         presupuesto_asignado = float(p["presupuesto_asignado"]) if p and p["presupuesto_asignado"] is not None else 0.0
 
         e = conn.execute(
-            q_exec, {"categoria": categoria, "ini": ini.isoformat(), "fin": fin.isoformat()}
+            q_exec,
+            {"categoria": categoria, "anio": anio}  # 👈 aquí se usa anio
         ).mappings().one()
         ejecutado = float(e["ejecutado"]) if e["ejecutado"] is not None else 0.0
 
@@ -121,6 +128,7 @@ def get_presupuesto_restante(categoria: str, periodo: str) -> Dict[str, Any]:
         "restante": restante,
         "porcentaje_usado": porcentaje,
     }
+
 
 def get_productos_caros(limit: int = 10) -> list[dict]:
     """
@@ -208,5 +216,28 @@ def get_total_categoria_valor(
     "maximo": float(maximo),
     "lista_registros": lista
     }
+
+def get_productos_caros_categoria(categoria: str, fecha_inicio: str, fecha_fin: str, limit: int = 10) -> list[dict]:
+    sql = text("""
+        SELECT NOMBRE_PRODUCTO, CATEGORIA, VALOR, FECHA
+        FROM gastos
+        WHERE UPPER(CATEGORIA) = UPPER(:categoria)
+          AND FECHA BETWEEN :fecha_inicio AND :fecha_fin
+        ORDER BY VALOR DESC
+        LIMIT :limit
+    """)
+    
+    eng = get_engine()
+    with eng.connect() as conn:
+        rows = conn.execute(sql, {
+            "categoria": categoria,
+            "fecha_inicio": fecha_inicio,
+            "fecha_fin": fecha_fin,
+            "limit": limit
+        }).mappings().all()
+
+    return [dict(r) for r in rows]
+
+
 
 

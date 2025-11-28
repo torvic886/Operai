@@ -97,6 +97,21 @@ def productos_caros(limit: int = 10):
     result = call_tool("productos_caros", payload)
     return result
 
+def productos_caros_categoria(categoria: str, fecha_inicio: str, fecha_fin: str, limit: int = 10):
+    _validar_categoria(categoria)
+    _validar_rango_fechas(fecha_inicio, fecha_fin)
+
+    payload = {
+        "categoria": categoria.upper(),
+        "fecha_inicio": fecha_inicio,
+        "fecha_fin": fecha_fin,
+        "limit": limit
+    }
+
+    result = call_tool("productos_caros_categoria", payload)
+    return result
+
+
 # ===============================================================
 # NUEVA HERRAMIENTA: total_categoria_valor
 # ===============================================================
@@ -122,3 +137,4 @@ def total_categoria_valor(req: TotalCategoriaValorRequest) -> TotalCategoriaValo
 
     result = call_tool("total_categoria_valor", payload)
     return TotalCategoriaValorResponse(**result)
+
