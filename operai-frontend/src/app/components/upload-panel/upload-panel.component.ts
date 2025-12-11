@@ -73,12 +73,33 @@ export class UploadPanelComponent {
       next: (response: any) => {
         this.isUploading = false;
         this.selectedFile = null;
-        this.showNotification('success', `✅ ${response.rows_processed} registros cargados exitosamente`);
+        
+        // ✅ MENSAJE MEJORADO
+        const rows = response.rows_processed || 0;
+        const filename = response.filename || 'archivo';
+        
+        this.showNotification(
+          'success', 
+          `${rows} ${rows === 1 ? 'registro cargado' : 'registros cargados'} desde "${filename}"`
+        );
+        
         this.loadStats();
       },
       error: (error) => {
         this.isUploading = false;
-        this.showNotification('error', `❌ Error: ${error.error?.detail || 'Error al cargar archivo'}`);
+        
+        // ✅ MANEJO DE ERRORES MEJORADO
+        let errorMsg = 'No se pudo cargar el archivo. Verifica el formato.';
+        
+        if (error.status === 0) {
+          errorMsg = 'No se pudo conectar con el servidor. Verifica tu conexión.';
+        } else if (error.error?.detail) {
+          errorMsg = error.error.detail;
+        } else if (error.message) {
+          errorMsg = error.message;
+        }
+        
+        this.showNotification('error', errorMsg);
       }
     });
   }
@@ -95,12 +116,19 @@ export class UploadPanelComponent {
         this.isImporting = false;
         this.importSheetUrl = '';
         this.importSheetName = '';
-        this.showNotification('success', `✅ ${response.rows_processed} registros importados`);
+        
+        // ✅ MENSAJE MEJORADO
+        const rows = response.rows_processed || 0;
+        this.showNotification(
+          'success', 
+          `${rows} ${rows === 1 ? 'registro importado' : 'registros importados'} desde Google Sheets`
+        );
+        
         this.loadStats();
       },
       error: (error) => {
         this.isImporting = false;
-        this.showNotification('error', `❌ Error: ${error.error?.detail || 'Error al importar'}`);
+        this.showNotification('error', error.error?.detail || 'Error al importar desde Google Sheets');
       }
     });
   }
@@ -119,11 +147,17 @@ export class UploadPanelComponent {
           rows: response.rows_exported,
           date: new Date()
         };
-        this.showNotification('success', `✅ ${response.rows_exported} registros exportados exitosamente`);
+        
+        // ✅ MENSAJE MEJORADO
+        const rows = response.rows_exported || 0;
+        this.showNotification(
+          'success', 
+          `${rows} ${rows === 1 ? 'registro exportado' : 'registros exportados'} a Google Sheets`
+        );
       },
       error: (error) => {
         this.isExporting = false;
-        this.showNotification('error', `❌ Error: ${error.error?.detail || 'Error al exportar'}`);
+        this.showNotification('error', error.error?.detail || 'Error al exportar a Google Sheets');
       }
     });
   }
@@ -134,7 +168,7 @@ export class UploadPanelComponent {
         this.stats = response;
       },
       error: (error) => {
-        console.error('Error cargando estadísticas:', error);
+        console.error('❌ Error cargando estadísticas:', error);
       }
     });
   }

@@ -1,31 +1,175 @@
 .sidebar {
-    width: 64px;
-    background-color: #e5e7eb;
+    width: 80px;
+    background: linear-gradient(180deg, #1f2937 0%, #111827 100%);
     display: flex;
     flex-direction: column;
     align-items: center;
     padding: 24px 0;
-    gap: 24px;
+    gap: 12px;
+    box-shadow: 2px 0 12px rgba(0, 0, 0, 0.3);
+    transition: width 0.3s ease;
+}
+
+.sidebar:hover {
+    width: 200px;
 }
 
 .sidebar-btn {
-    width: 48px;
-    height: 48px;
-    border: none;
-    background-color: transparent;
-    border-radius: 8px;
+    width: 56px;
+    height: 56px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 2px solid transparent;
+    border-radius: 16px;
+    color: rgba(255, 255, 255, 0.6);
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: background-color 0.2s;
-    color: #374151;
+    gap: 12px;
+    padding: 0 12px;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.sidebar:hover .sidebar-btn {
+    width: calc(100% - 24px);
+    justify-content: flex-start;
+}
+
+.sidebar-btn svg {
+    min-width: 24px;
+    transition: transform 0.3s ease;
+}
+
+.sidebar-label {
+    opacity: 0;
+    white-space: nowrap;
+    font-size: 0.875rem;
+    font-weight: 600;
+    transition: opacity 0.3s ease;
+    position: absolute;
+    left: 52px;
+}
+
+.sidebar:hover .sidebar-label {
+    opacity: 1;
+    position: relative;
+    left: 0;
 }
 
 .sidebar-btn:hover {
-    background-color: #d1d5db;
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    border-color: rgba(255, 255, 255, 0.2);
+    transform: translateX(4px);
+}
+
+.sidebar-btn:hover svg {
+    transform: scale(1.1);
 }
 
 .sidebar-btn.active {
-    background-color: #d1d5db;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-color: #764ba2;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.sidebar-btn.active svg {
+    transform: scale(1.15);
+}
+
+.sidebar-divider {
+    width: 40px;
+    height: 2px;
+    background: rgba(255, 255, 255, 0.1);
+    margin: 12px 0;
+    border-radius: 2px;
+    transition: width 0.3s ease;
+}
+
+.sidebar:hover .sidebar-divider {
+    width: calc(100% - 24px);
+}
+
+/* Tooltip para cuando no está expandido */
+.sidebar-btn::before {
+    content: attr(title);
+    position: absolute;
+    left: 100%;
+    margin-left: 12px;
+    padding: 8px 12px;
+    background: rgba(0, 0, 0, 0.9);
+    color: white;
+    border-radius: 8px;
+    font-size: 0.75rem;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+    z-index: 1000;
+}
+
+.sidebar:not(:hover) .sidebar-btn:hover::before {
+    opacity: 1;
+}
+
+.sidebar:hover .sidebar-btn::before {
+    display: none;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+    .sidebar {
+        width: 70px !important;
+        padding: 16px 0;
+    }
+
+    .sidebar-btn {
+        width: 50px !important;
+        height: 50px;
+    }
+
+    .sidebar-label {
+        display: none !important;
+    }
+
+    .sidebar-divider {
+        width: 35px;
+    }
+}
+
+@media (max-width: 768px) {
+    .sidebar {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        width: 100% !important;
+        height: 70px;
+        flex-direction: row !important;
+        padding: 0 8px;
+        justify-content: space-around;
+        z-index: 100;
+        box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.5);
+    }
+
+    .sidebar-btn {
+        width: 56px !important;
+        height: 56px;
+        border-radius: 12px;
+    }
+
+    .sidebar-label {
+        display: none !important;
+    }
+
+    .sidebar-divider {
+        display: none;
+    }
+    
+    .sidebar-btn::before {
+        display: none !important;
+    }
 }

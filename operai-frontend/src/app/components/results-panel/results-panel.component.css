@@ -29,6 +29,23 @@
     color: #374151;
 }
 
+/* ✅ NUEVA: Animación de loading en tabla */
+.loading-spinner {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 3px solid #e5e7eb;
+    border-top-color: #14b8a6;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-right: 8px;
+    vertical-align: middle;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
 .table-wrapper {
     overflow-x: auto;
 }
@@ -77,6 +94,36 @@
     margin-bottom: 12px;
 }
 
+/* ✅ NUEVO: Contenedor de acciones del header */
+.header-actions {
+    display: flex;
+    gap: 8px;
+}
+
+/* ✅ NUEVO: Botón de refresh */
+.btn-refresh {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    background-color: #f3f4f6;
+    color: #374151;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-refresh:hover {
+    background-color: #e5e7eb;
+    transform: rotate(180deg);
+}
+
+.btn-refresh:active {
+    transform: rotate(180deg) scale(0.95);
+}
+
 .btn-fullscreen {
     display: flex;
     align-items: center;
@@ -106,6 +153,44 @@
     margin-top: 12px;
     background-color: #ffffff;
     box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    position: relative; /* ✅ Para el loading overlay */
+}
+
+/* ✅ NUEVO: Loading overlay para el iframe */
+.loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.95);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    z-index: 10;
+    animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid #e5e7eb;
+    border-top-color: #14b8a6;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+.loading-overlay p {
+    color: #6b7280;
+    font-size: 0.875rem;
+    margin: 0;
 }
 
 .powerbi-iframe {
@@ -114,7 +199,7 @@
     border: none;
 }
 
-/* Modal Fullscreen */
+/* Modal Fullscreen - MEJORADO */
 .modal-fullscreen {
     position: fixed;
     top: 0;
@@ -128,28 +213,31 @@
     animation: fadeIn 0.2s ease-out;
 }
 
-@keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-}
-
 .modal-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     padding: 16px 24px;
-    background-color: #1f2937;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
+}
+
+/* ✅ NUEVO: Contenedor del header con icono */
+.modal-header-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
 }
 
 .modal-header h2 {
     margin: 0;
     font-size: 1.25rem;
+    font-weight: 600;
 }
 
 .btn-close {
-    background: none;
-    border: none;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
     color: white;
     cursor: pointer;
     padding: 8px;
@@ -157,11 +245,13 @@
     align-items: center;
     justify-content: center;
     border-radius: 6px;
-    transition: background-color 0.2s;
+    transition: all 0.2s;
+    backdrop-filter: blur(10px);
 }
 
 .btn-close:hover {
-    background-color: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.2);
+    transform: scale(1.1);
 }
 
 .modal-body {
@@ -177,12 +267,35 @@
     border-radius: 8px;
 }
 
+/* Responsive */
 @media (min-width: 1600px) {
     .powerbi-container {
-    height: 600px;
+        height: 600px;
     }
 }
 
+@media (max-width: 768px) {
+    .dashboard-header {
+        flex-direction: column;
+        gap: 12px;
+        align-items: flex-start;
+    }
+
+    .header-actions {
+        width: 100%;
+    }
+
+    .btn-fullscreen {
+        flex: 1;
+        justify-content: center;
+    }
+
+    .btn-refresh {
+        width: 48px;
+    }
+}
+
+/* Scrollbar personalizado */
 ::-webkit-scrollbar {
     width: 6px;
 }

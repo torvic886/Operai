@@ -1,0 +1,16 @@
+# Streamlit App Requirements
+
+# Core
+streamlit==1.31.0
+pandas==2.2.0
+numpy==1.26.3
+
+# API Client
+requests==2.31.0
+
+# Visualizations
+plotly==5.18.0
+matplotlib==3.8.2
+
+# Utils
+python-dateutil==2.8.2

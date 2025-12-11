@@ -41,6 +41,107 @@ def create_app() -> FastAPI:
     def health_app():
         return {"status": "ok", "service": "OperAI Tools API", "version": "0.1.0"}
 
+    # ======================= NUEVOS ENDPOINTS PARA STREAMLIT ============================
+    
+    @app.get("/api/tools/fechas")
+    def get_rango_fechas():
+        """
+        Devuelve el rango de fechas mínima y máxima disponible en la base de datos
+        """
+        try:
+            engine = get_engine()
+            with engine.connect() as conn:
+                result = conn.execute(
+                    text("SELECT MIN(FECHA) as fecha_minima, MAX(FECHA) as fecha_maxima FROM gastos")
+                ).mappings().one()
+            
+            return {
+                "fecha_minima": result["fecha_minima"].isoformat() if result["fecha_minima"] else None,
+                "fecha_maxima": result["fecha_maxima"].isoformat() if result["fecha_maxima"] else None
+            }
+        except Exception as e:
+            logger.exception("Error obteniendo rango de fechas")
+            raise HTTPException(status_code=500, detail=f"Error: {e}")
+
+    @app.get("/api/tools/gasto_por_categoria")
+    def gasto_por_categoria(fecha_inicio: str = None, fecha_fin: str = None):
+        """
+        Devuelve el total de gastos agrupados por categoría
+        """
+        try:
+            engine = get_engine()
+            
+            query = """
+                SELECT 
+                    CATEGORIA as categoria,
+                    SUM(VALOR * CANTIDAD) as total,
+                    COUNT(*) as cantidad_registros
+                FROM gastos
+            """
+            
+            params = {}
+            if fecha_inicio and fecha_fin:
+                query += " WHERE FECHA BETWEEN :fecha_inicio AND :fecha_fin"
+                params = {"fecha_inicio": fecha_inicio, "fecha_fin": fecha_fin}
+            
+            query += " GROUP BY CATEGORIA ORDER BY total DESC"
+            
+            with engine.connect() as conn:
+                result = conn.execute(text(query), params).mappings().all()
+            
+            return [
+                {
+                    "categoria": row["categoria"],
+                    "total": float(row["total"]),
+                    "cantidad_registros": int(row["cantidad_registros"])
+                }
+                for row in result
+            ]
+            
+        except Exception as e:
+            logger.exception("Error en gasto_por_categoria")
+            raise HTTPException(status_code=500, detail=f"Error: {e}")
+
+    @app.get("/api/tools/estadisticas_generales")
+    def estadisticas_generales(fecha_inicio: str = None, fecha_fin: str = None):
+        """
+        Devuelve estadísticas generales del sistema
+        """
+        try:
+            engine = get_engine()
+            
+            base_query = "SELECT COUNT(*) as total, SUM(VALOR * CANTIDAD) as monto_total FROM gastos"
+            params = {}
+            
+            if fecha_inicio and fecha_fin:
+                base_query += " WHERE FECHA BETWEEN :fecha_inicio AND :fecha_fin"
+                params = {"fecha_inicio": fecha_inicio, "fecha_fin": fecha_fin}
+            
+            with engine.connect() as conn:
+                result = conn.execute(text(base_query), params).mappings().one()
+                
+                # Categorías únicas
+                cat_result = conn.execute(
+                    text("SELECT COUNT(DISTINCT CATEGORIA) as total FROM gastos")
+                ).scalar()
+                
+                # Promedio general
+                avg_result = conn.execute(
+                    text(f"{base_query.replace('COUNT(*) as total, SUM(VALOR * CANTIDAD)', 'AVG(VALOR * CANTIDAD)')}"),
+                    params
+                ).scalar()
+            
+            return {
+                "total_registros": int(result["total"] or 0),
+                "monto_total": float(result["monto_total"] or 0),
+                "promedio": float(avg_result or 0),
+                "total_categorias": int(cat_result or 0)
+            }
+            
+        except Exception as e:
+            logger.exception("Error en estadísticas generales")
+            raise HTTPException(status_code=500, detail=f"Error: {e}")
+
     # ======================= POST ===========================
     @app.post("/api/tools/promedio_categoria", response_model=PromedioCategoriaResponse)
     def promedio_categoria(req: PromedioCategoriaRequest):
@@ -123,7 +224,6 @@ def create_app() -> FastAPI:
     @app.get("/api/tools/promedio_categoria")
     def promedio_categoria_get(categoria: str, fecha_inicio: str, fecha_fin: str):
         try:
-            # ⬇⬇⬇ usar el modelo importado, no services.*
             req = PromedioCategoriaRequest(
                 categoria=categoria, fecha_inicio=fecha_inicio, fecha_fin=fecha_fin
             )
@@ -136,13 +236,12 @@ def create_app() -> FastAPI:
     @app.get("/api/tools/buscar_por_categoria")
     def buscar_por_categoria_get(categoria: str, fecha_inicio: str, fecha_fin: str, proveedor: str | None = None):
         try:
-            # ⬇⬇⬇ usar el modelo importado, no services.*
             req = BuscarPorCategoriaRequest(
                 categoria=categoria, fecha_inicio=fecha_inicio, fecha_fin=fecha_fin, proveedor=proveedor
             )
             return services.buscar_por_categoria(req)
         except Exception:
-            logger.exception("falló buscar_por_categoria_get")   # <-- imprime traceback en consola
+            logger.exception("falló buscar_por_categoria_get")
             raise HTTPException(status_code=500, detail="Error interno al buscar por categoría")
 
     @app.get("/api/tools/total_categoria_valor", response_model=TotalCategoriaValorResponse)
@@ -298,13 +397,12 @@ def create_app() -> FastAPI:
     @app.get("/api/tools/presupuesto_restante")
     def presupuesto_restante_get(categoria: str, periodo: str, permitir_sin_presupuesto: bool = False):
         try:
-            # ⬇⬇⬇ usar el modelo importado, no services.*
             req = PresupuestoRestanteRequest(
                 categoria=categoria, periodo=periodo, permitir_sin_presupuesto=permitir_sin_presupuesto
             )
             return services.presupuesto_restante(req)
         except Exception:
-            logger.exception("falló presupuesto_restante_get")   # <-- imprime traceback en consola
+            logger.exception("falló presupuesto_restante_get")
             raise HTTPException(status_code=500, detail="Error interno al consultar presupuesto restante")
 
     app.include_router(chat_router)

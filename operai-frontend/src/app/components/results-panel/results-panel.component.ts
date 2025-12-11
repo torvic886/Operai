@@ -1,7 +1,8 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
+import { SafeResourceUrl } from '@angular/platform-browser';
 import { GastosService } from '../../services/gastos.service';
+import { PowerBIService } from '../../services/powerbi.service';
 import { Gasto } from '../../models/gasto.model';
 
 @Component({
@@ -15,30 +16,40 @@ export class ResultsPanelComponent implements OnInit {
   gastos: Gasto[] = [];
   powerBiUrl: SafeResourceUrl;
   showFullscreen = false;
+  isLoading = true;
 
   constructor(
     private gastosService: GastosService,
-    private sanitizer: DomSanitizer
+    private powerBiService: PowerBIService // ✅ INYECTAR EL SERVICIO
   ) {
-    const powerBiEmbedUrl = 'https://app.powerbi.com/view?r=eyJrIjoiYjc4NDc2NGUtNmEzNS00MmU2LThlNzUtY2E2Yjc0M2UyYTg3IiwidCI6ImNiYzJjMzgxLTJmMmUtNGQ5My05MWQxLTUwNmM5MzE2YWNlNyIsImMiOjR9';
-    this.powerBiUrl = this.sanitizer.bypassSecurityTrustResourceUrl(powerBiEmbedUrl);
+    // ✅ USAR EL SERVICIO EN LUGAR DE HARDCODEAR
+    this.powerBiUrl = this.powerBiService.getDashboardUrl();
   }
 
   ngOnInit(): void {
     this.gastosService.gastos$.subscribe(gastos => {
       this.gastos = gastos;
     });
+
+    // ✅ SUSCRIBIRSE AL ESTADO DE CARGA
+    this.powerBiService.loading$.subscribe(loading => {
+      this.isLoading = loading;
+    });
   }
 
   openFullscreen(): void {
     this.showFullscreen = true;
-    // Prevenir scroll del body
     document.body.style.overflow = 'hidden';
   }
 
   closeFullscreen(): void {
     this.showFullscreen = false;
-    // Restaurar scroll del body
     document.body.style.overflow = 'auto';
+  }
+
+  // ✅ NUEVO: Método para refrescar el dashboard
+  refreshDashboard(): void {
+    this.isLoading = true;
+    this.powerBiUrl = this.powerBiService.getDashboardUrl();
   }
 }

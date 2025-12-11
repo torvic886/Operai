@@ -1,212 +1,265 @@
 <div class="upload-panel">
-    <h2 class="panel-title">Cargar Datos</h2>
+    <!-- ✅ NOTIFICACIÓN NUEVA (AL INICIO DEL MODAL) -->
+    <div class="notification-container" *ngIf="notification" 
+         [ngClass]="{
+           'notification-success': notification.type === 'success',
+           'notification-error': notification.type === 'error'
+         }">
+        <div class="notification-content">
+            <!-- Icono de éxito -->
+            <svg *ngIf="notification.type === 'success'" 
+                 class="notification-icon" 
+                 xmlns="http://www.w3.org/2000/svg" 
+                 width="28" 
+                 height="28" 
+                 viewBox="0 0 24 24" 
+                 fill="none" 
+                 stroke="currentColor" 
+                 stroke-width="2.5"
+                 stroke-linecap="round"
+                 stroke-linejoin="round">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                <polyline points="22 4 12 14.01 9 11.01"></polyline>
+            </svg>
+            
+            <!-- Icono de error -->
+            <svg *ngIf="notification.type === 'error'" 
+                 class="notification-icon" 
+                 xmlns="http://www.w3.org/2000/svg" 
+                 width="28" 
+                 height="28" 
+                 viewBox="0 0 24 24" 
+                 fill="none" 
+                 stroke="currentColor" 
+                 stroke-width="2.5"
+                 stroke-linecap="round"
+                 stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="15" y1="9" x2="9" y2="15"></line>
+                <line x1="9" y1="9" x2="15" y2="15"></line>
+            </svg>
+            
+            <!-- Texto -->
+            <div class="notification-text">
+                <div class="notification-title">
+                    {{ notification.type === 'success' ? '¡Éxito!' : 'Error' }}
+                </div>
+                <div class="notification-message">
+                    {{ notification.message }}
+                </div>
+            </div>
+            
+            <!-- Botón cerrar -->
+            <button class="notification-close" 
+                    (click)="notification = null"
+                    type="button">
+                <svg xmlns="http://www.w3.org/2000/svg" 
+                     width="20" 
+                     height="20" 
+                     viewBox="0 0 24 24" 
+                     fill="none" 
+                     stroke="currentColor" 
+                     stroke-width="2.5"
+                     stroke-linecap="round"
+                     stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <!-- Panel header -->
+    <div class="panel-header">
+        <h2 class="panel-title">Cargar Datos</h2>
+        <p class="panel-subtitle">Importa y exporta datos desde múltiples fuentes</p>
+    </div>
 
     <!-- CSV Upload -->
-    <div class="upload-section">
-        <h3 class="section-title">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
-                stroke="currentColor" stroke-width="2">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                <polyline points="14 2 14 8 20 8"></polyline>
-            </svg>
-            Subir archivo CSV
-        </h3>
-
-        <div class="file-upload-area" [class.drag-over]="isDragging" (dragover)="onDragOver($event)"
-            (dragleave)="onDragLeave($event)" (drop)="onDrop($event)" (click)="fileInput.click()">
-            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none"
+    <div class="upload-section" (click)="fileInput.click()">
+        <div class="upload-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none"
                 stroke="currentColor" stroke-width="2">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                 <polyline points="17 8 12 3 7 8"></polyline>
                 <line x1="12" y1="3" x2="12" y2="15"></line>
             </svg>
-            <p class="upload-text">Arrastra tu archivo CSV aquí o haz clic para seleccionar</p>
-            <p class="upload-hint">Formato:
-                CODIGO;FECHA;CATEGORIA;CODIGO_LETRA;CODIGO_NUM;NOMBRE_PRODUCTO;TIPO;VALOR;CANTIDAD</p>
-            <input #fileInput type="file" accept=".csv" (change)="onFileSelected($event)" style="display: none">
         </div>
-
-        <div class="selected-file" *ngIf="selectedFile">
+        <h3>Subir archivo CSV</h3>
+        <p>Arrastra tu archivo CSV aquí o haz clic para seleccionar</p>
+        <p style="font-size: 0.875rem; margin-top: 8px;">Formato: CODIGO;FECHA;CATEGORIA;CODIGO_LETRA;CODIGO_NUM;NOMBRE_PRODUCTO;TIPO;VALOR;CANTIDAD</p>
+        <input #fileInput type="file" accept=".csv" (change)="onFileSelected($event)" class="file-input">
+        
+        <div *ngIf="selectedFile" style="margin-top: 16px; color: #10b981; font-weight: 600;">
+            ✓ {{ selectedFile.name }}
+        </div>
+        
+        <button class="btn-upload" *ngIf="selectedFile" [disabled]="isUploading" (click)="uploadFile(); $event.stopPropagation()">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
                 stroke="currentColor" stroke-width="2">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="17 8 12 3 7 8"></polyline>
+                <line x1="12" y1="3" x2="12" y2="15"></line>
             </svg>
-            <span>{{ selectedFile.name }}</span>
-            <button class="btn-remove" (click)="removeFile()">✕</button>
-        </div>
-
-        <button class="btn-upload" [disabled]="!selectedFile || isUploading" (click)="uploadFile()">
             <span *ngIf="!isUploading">Cargar archivo</span>
             <span *ngIf="isUploading">Cargando...</span>
         </button>
     </div>
 
+    <div class="divider">O importa desde</div>
+
     <!-- Google Sheets Import -->
-    <div class="upload-section">
-        <h3 class="section-title">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
-                stroke="currentColor" stroke-width="2">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                <polyline points="7 10 12 15 17 10"></polyline>
-                <line x1="12" y1="15" x2="12" y2="3"></line>
-            </svg>
+    <div class="sheets-section">
+        <h3>
+            <div class="sheets-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="7 10 12 15 17 10"></polyline>
+                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+            </div>
             Importar desde Google Sheets
         </h3>
 
-        <input type="text" [(ngModel)]="importSheetUrl" placeholder="URL de Google Sheets" class="input-field">
+        <div class="sheets-form">
+            <!-- FILA 1: URL -->
+            <div class="form-group">
+                <label class="form-label">URL de Google Sheets</label>
+                <input 
+                    type="text" 
+                    class="form-input" 
+                    placeholder="https://docs.google.com/spreadsheets/d/..."
+                    [(ngModel)]="importSheetUrl">
+            </div>
 
-        <input type="text" [(ngModel)]="importSheetName" placeholder="Nombre de la hoja (opcional)" class="input-field">
+            <!-- FILA 2: Nombre de hoja -->
+            <div class="form-group">
+                <label class="form-label">Nombre de la hoja (opcional)</label>
+                <input 
+                    type="text" 
+                    class="form-input" 
+                    placeholder="Hoja1, Datos, etc."
+                    [(ngModel)]="importSheetName">
+            </div>
 
-        <button class="btn-sync" [disabled]="!importSheetUrl || isImporting" (click)="importFromGoogleSheets()">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
-                stroke="currentColor" stroke-width="2">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                <polyline points="7 10 12 15 17 10"></polyline>
-                <line x1="12" y1="15" x2="12" y2="3"></line>
-            </svg>
-            <span *ngIf="!isImporting">Importar datos</span>
-            <span *ngIf="isImporting">Importando...</span>
-        </button>
+            <!-- FILA 3: Botón -->
+            <button class="btn-upload btn-sheets" [disabled]="!importSheetUrl || isImporting" (click)="importFromGoogleSheets()">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="7 10 12 15 17 10"></polyline>
+                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+                <span *ngIf="!isImporting">Importar datos</span>
+                <span *ngIf="isImporting">Importando...</span>
+            </button>
+        </div>
     </div>
 
+    <div class="divider">O exporta tus datos</div>
+
     <!-- Google Sheets Export -->
-    <div class="upload-section export-section">
-        <h3 class="section-title">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
-                stroke="currentColor" stroke-width="2">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                <polyline points="17 8 12 3 7 8"></polyline>
-                <line x1="12" y1="3" x2="12" y2="15"></line>
-            </svg>
+    <div class="export-section">
+        <h3>
+            <div class="export-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="17 8 12 3 7 8"></polyline>
+                    <line x1="12" y1="3" x2="12" y2="15"></line>
+                </svg>
+            </div>
             Exportar a Google Sheets
         </h3>
 
         <p class="export-description">
-            Exporta <strong>TODOS los registros</strong> ({{ stats?.total_records | number }}) de la base de datos a tu
-            hoja de Google Sheets.
+            Exporta <strong>TODOS los registros</strong> ({{ stats?.total_records | number }}) de la base de datos a tu hoja de Google Sheets.
         </p>
 
-        <input type="text" [(ngModel)]="exportSheetUrl" placeholder="URL de Google Sheets" class="input-field">
+        <div class="export-form">
+            <!-- FILA 1: URL -->
+            <div class="form-group">
+                <label class="form-label">URL de Google Sheets</label>
+                <input 
+                    type="text" 
+                    class="form-input" 
+                    placeholder="https://docs.google.com/spreadsheets/d/..."
+                    [(ngModel)]="exportSheetUrl">
+            </div>
 
-        <input type="text" [(ngModel)]="exportSheetName" placeholder="Nombre de la hoja (opcional)" class="input-field">
+            <!-- FILA 2: Nombre de hoja -->
+            <div class="form-group">
+                <label class="form-label">Nombre de la hoja (opcional)</label>
+                <input 
+                    type="text" 
+                    class="form-input" 
+                    placeholder="Exportación, Datos, etc."
+                    [(ngModel)]="exportSheetName">
+            </div>
 
-        <button class="btn-export" [disabled]="!exportSheetUrl || isExporting" (click)="exportToGoogleSheets()">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
-                stroke="currentColor" stroke-width="2">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                <polyline points="17 8 12 3 7 8"></polyline>
-                <line x1="12" y1="3" x2="12" y2="15"></line>
-            </svg>
-            <span *ngIf="!isExporting">Exportar datos</span>
-            <span *ngIf="isExporting">Exportando...</span>
-        </button>
-
-        <div class="export-info" *ngIf="lastExportInfo">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
-                stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="10"></circle>
-                <polyline points="12 6 12 12 16 14"></polyline>
-            </svg>
-            <span>Última exportación: {{ lastExportInfo.rows }} registros - {{ lastExportInfo.date | date:'short'
-                }}</span>
+            <!-- FILA 3: Botón -->
+            <button class="btn-upload btn-export" [disabled]="!exportSheetUrl || isExporting" (click)="exportToGoogleSheets()">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="17 8 12 3 7 8"></polyline>
+                    <line x1="12" y1="3" x2="12" y2="15"></line>
+                </svg>
+                <span *ngIf="!isExporting">Exportar datos</span>
+                <span *ngIf="isExporting">Exportando...</span>
+            </button>
         </div>
     </div>
 
-    <!-- Stats -->
+    <!-- Stats Section -->
     <div class="stats-section" *ngIf="stats">
-    <h3 class="section-title">Estadísticas de la Base de Datos</h3>
-    <div class="stats-grid">
-        <div class="stat-card">
-        <div class="stat-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M3 3v18h18"></path>
-            <path d="M18 17V9"></path>
-            <path d="M13 17V5"></path>
-            <path d="M8 17v-3"></path>
-            </svg>
-        </div>
-        <div class="stat-value">{{ stats.total_records | number }}</div>
-        <div class="stat-label">Total registros</div>
-        </div>
-        <div class="stat-card">
-        <div class="stat-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-            <line x1="9" y1="9" x2="15" y2="9"></line>
-            <line x1="9" y1="15" x2="15" y2="15"></line>
-            </svg>
-        </div>
-        <div class="stat-value">{{ stats.by_category?.length || 0 }}</div>
-        <div class="stat-label">Categorías</div>
-        </div>
-        <div class="stat-card" *ngIf="stats.last_import">
-        <div class="stat-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10"></circle>
-            <polyline points="12 6 12 12 16 14"></polyline>
-            </svg>
-        </div>
-        <div class="stat-value">{{ stats.last_import.date | date:'short' }}</div>
-        <div class="stat-label">Última carga</div>
-        <div class="stat-detail">
-            {{ stats.last_import.source }} - {{ stats.last_import.rows | number }} registros
-        </div>
-        </div>
-    </div>
-
-    <!-- Top Categories -->
-    <div class="top-categories" *ngIf="stats.by_category && stats.by_category.length > 0">
-        <h4 class="subsection-title">Top 5 Categorías</h4>
-        <div class="category-list">
-        <div class="category-item" *ngFor="let cat of stats.by_category.slice(0, 5)">
-            <span class="category-name">{{ cat.categoria }}</span>
-            <span class="category-count">{{ cat.count | number }} registros</span>
-        </div>
-        </div>
-    </div>
-
-    <!-- Import History -->
-    <div class="import-history" *ngIf="stats.import_history && stats.import_history.length > 0">
-        <h4 class="subsection-title">Historial de Cargas (Últimas 10)</h4>
-        <div class="history-list">
-        <div class="history-item" *ngFor="let item of stats.import_history">
-            <div class="history-icon" [class.success]="item.status === 'SUCCESS'" [class.error]="item.status === 'ERROR'">
-            <svg *ngIf="item.status === 'SUCCESS'" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polyline points="20 6 9 17 4 12"></polyline>
-            </svg>
-            <svg *ngIf="item.status === 'ERROR'" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="10"></circle>
-                <line x1="15" y1="9" x2="9" y2="15"></line>
-                <line x1="9" y1="9" x2="15" y2="15"></line>
-            </svg>
+        <h3>Estadísticas de la Base de Datos</h3>
+        
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value">{{ stats.total_records | number }}</div>
+                <div class="stat-label">Total registros</div>
             </div>
-            <div class="history-info">
-            <div class="history-date">{{ item.date | date:'short' }}</div>
-            <div class="history-details">
-                <span class="history-source">{{ item.source }}</span>
-                <span class="history-separator">•</span>
-                <span class="history-rows">{{ item.rows | number }} registros</span>
-                <span class="history-filename" *ngIf="item.filename">• {{ item.filename }}</span>
+            <div class="stat-card">
+                <div class="stat-value">{{ stats.by_category?.length || 0 }}</div>
+                <div class="stat-label">Categorías</div>
             </div>
+            <div class="stat-card" *ngIf="stats.import_stats">
+                <div class="stat-value">{{ stats.import_stats.total_imports | number }}</div>
+                <div class="stat-label">Total Cargas</div>
             </div>
         </div>
-        </div>
-    </div>
-    </div>
 
-    <!-- Notification -->
-    <div class="notification" *ngIf="notification" [class.success]="notification.type === 'success'"
-        [class.error]="notification.type === 'error'">
-        <svg *ngIf="notification.type === 'success'" xmlns="http://www.w3.org/2000/svg" width="20" height="20"
-            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="20 6 9 17 4 12"></polyline>
-        </svg>
-        <svg *ngIf="notification.type === 'error'" xmlns="http://www.w3.org/2000/svg" width="20" height="20"
-            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10"></circle>
-            <line x1="15" y1="9" x2="9" y2="15"></line>
-            <line x1="9" y1="9" x2="15" y2="15"></line>
-        </svg>
-        <span>{{ notification.message }}</span>
+        <!-- Top Categories -->
+        <div class="categories-list" *ngIf="stats.by_category && stats.by_category.length > 0">
+            <h4>Top 5 Categorías</h4>
+            <div class="category-item" *ngFor="let cat of stats.by_category.slice(0, 5)">
+                <span class="category-name">{{ cat.categoria }}</span>
+                <span class="category-count">{{ cat.count | number }} registros</span>
+            </div>
+        </div>
+
+        <!-- Import History -->
+        <div class="history-section" *ngIf="stats.import_history && stats.import_history.length > 0">
+            <h4>Historial de Cargas (Últimas 10)</h4>
+            <div class="history-item" *ngFor="let item of stats.import_history">
+                <div class="history-date">{{ item.date | date:'short' }}</div>
+                <div class="history-text">
+                    {{ item.source }} • {{ item.rows | number }} registros
+                    <span *ngIf="item.status === 'SUCCESS'"> ✓</span>
+                    <span *ngIf="item.status === 'ERROR'" style="color: #ef4444;"> ✗</span>
+                </div>
+                <a *ngIf="item.filename && item.filename.startsWith('http')" 
+                   [href]="item.filename" 
+                   target="_blank" 
+                   class="history-url">
+                    {{ item.filename }}
+                </a>
+                <div *ngIf="item.filename && !item.filename.startsWith('http')" class="history-url">
+                    {{ item.filename }}
+                </div>
+            </div>
+        </div>
     </div>
 </div>

@@ -110,31 +110,61 @@ class UploadService:
         """
         Limpia y transforma el DataFrame
         """
-        # Convertir FECHA a formato ISO
-        df['FECHA'] = pd.to_datetime(df['FECHA'], format='%Y-%m-%d', errors='coerce')
-        df['FECHA'] = df['FECHA'].dt.strftime('%Y-%m-%d')
+        # Convertir FECHA a formato ISO con múltiples formatos posibles
+        date_formats = ['%Y-%m-%d', '%d/%m/%Y', '%m/%d/%Y', '%Y/%m/%d', '%d-%m-%Y']
+        
+        def parse_date(date_str):
+            """Intenta parsear la fecha con múltiples formatos"""
+            if pd.isna(date_str) or date_str == '' or date_str is None:
+                return None
+                
+            date_str = str(date_str).strip()
+            
+            # Intentar cada formato
+            for fmt in date_formats:
+                try:
+                    parsed_date = pd.to_datetime(date_str, format=fmt)
+                    return parsed_date.strftime('%Y-%m-%d')
+                except:
+                    continue
+            
+            # Si ningún formato funciona, intentar inferir automáticamente
+            try:
+                parsed_date = pd.to_datetime(date_str, dayfirst=True)
+                return parsed_date.strftime('%Y-%m-%d')
+            except:
+                logger.warning(f"⚠️ No se pudo parsear fecha: '{date_str}'")
+                return None
+        
+        # Aplicar conversión de fechas
+        df['FECHA'] = df['FECHA'].apply(parse_date)
         
         # Limpiar VALOR
         df['VALOR'] = (
             df['VALOR']
+            .astype(str)
             .str.replace('.', '', regex=False)
             .str.replace(',', '.', regex=False)
-            .astype(float)
+            .str.replace('$', '', regex=False)
+            .str.strip()
         )
+        df['VALOR'] = pd.to_numeric(df['VALOR'], errors='coerce').fillna(0)
         
         # Limpiar CANTIDAD
         df['CANTIDAD'] = (
             df['CANTIDAD']
+            .astype(str)
             .str.replace('.', '', regex=False)
             .str.replace(',', '.', regex=False)
-            .astype(float)
+            .str.strip()
         )
+        df['CANTIDAD'] = pd.to_numeric(df['CANTIDAD'], errors='coerce').fillna(1)
         
         # Convertir TIPO a entero
-        df['TIPO'] = df['TIPO'].astype(int)
+        df['TIPO'] = pd.to_numeric(df['TIPO'], errors='coerce').fillna(0).astype(int)
         
         # Convertir CODIGO_NUM a entero
-        df['CODIGO_NUM'] = pd.to_numeric(df['CODIGO_NUM'], errors='coerce').fillna(0).astype('int64')
+        df['CODIGO_NUM'] = pd.to_numeric(df['CODIGO_NUM'], errors='coerce').fillna(0).astype(int)
         
         # Normalizar CATEGORIA
         df['CATEGORIA'] = df['CATEGORIA'].str.upper().str.strip()
@@ -151,20 +181,48 @@ class UploadService:
         """
         Valida que los datos sean correctos
         """
-        if df['FECHA'].isna().any():
-            return {"valid": False, "error": "Hay fechas inválidas en el archivo"}
+        # Validar fechas
+        invalid_dates = df[df['FECHA'].isna()]
+        if not invalid_dates.empty:
+            invalid_rows = invalid_dates.index.tolist()[:5]
+            return {
+                "valid": False, 
+                "error": f"Hay fechas inválidas en las filas: {invalid_rows}. Formatos aceptados: YYYY-MM-DD, DD/MM/YYYY, DD-MM-YYYY"
+            }
         
+        # Validar valores
         if (df['VALOR'] < 0).any():
-            return {"valid": False, "error": "Hay valores negativos en VALOR"}
+            invalid_rows = df[df['VALOR'] < 0].index.tolist()[:5]
+            return {
+                "valid": False, 
+                "error": f"Hay valores negativos en VALOR en las filas: {invalid_rows}"
+            }
         
-        if (df['CANTIDAD'] < 0).any():
-            return {"valid": False, "error": "Hay cantidades negativas"}
+        # Validar cantidades
+        if (df['CANTIDAD'] <= 0).any():
+            invalid_rows = df[df['CANTIDAD'] <= 0].index.tolist()[:5]
+            return {
+                "valid": False, 
+                "error": f"Hay cantidades inválidas (<=0) en las filas: {invalid_rows}"
+            }
         
-        if df['CATEGORIA'].isna().any() or (df['CATEGORIA'] == '').any():
-            return {"valid": False, "error": "Hay categorías vacías"}
+        # Validar categorías
+        empty_categories = df[(df['CATEGORIA'].isna()) | (df['CATEGORIA'] == '')]
+        if not empty_categories.empty:
+            invalid_rows = empty_categories.index.tolist()[:5]
+            return {
+                "valid": False, 
+                "error": f"Hay categorías vacías en las filas: {invalid_rows}"
+            }
         
-        if df['CODIGO'].isna().any() or (df['CODIGO'] == '').any():
-            return {"valid": False, "error": "Hay códigos vacíos"}
+        # Validar códigos
+        empty_codes = df[(df['CODIGO'].isna()) | (df['CODIGO'] == '')]
+        if not empty_codes.empty:
+            invalid_rows = empty_codes.index.tolist()[:5]
+            return {
+                "valid": False, 
+                "error": f"Hay códigos vacíos en las filas: {invalid_rows}"
+            }
         
         return {"valid": True}
     

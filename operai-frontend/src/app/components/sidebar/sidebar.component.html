@@ -1,28 +1,61 @@
 <aside class="sidebar">
-    <button class="sidebar-btn" [class.active]="activeSection === 'chart'" (click)="selectSection('chart')"
-        title="Gráficos">
+    <!-- Vista 1: Asistente IA -->
+    <button 
+        class="sidebar-btn" 
+        [class.active]="currentView === 'asistente'" 
+        (click)="navigateTo('asistente')"
+        title="🤖 Asistente IA">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+        </svg>
+        <span class="sidebar-label">Asistente IA</span>
+    </button>
+
+    <!-- Vista 2: Power BI -->
+    <button 
+        class="sidebar-btn" 
+        [class.active]="currentView === 'powerbi'" 
+        (click)="navigateTo('powerbi')"
+        title="📊 Power BI">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="7" height="7"></rect>
+            <rect x="14" y="3" width="7" height="7"></rect>
+            <rect x="14" y="14" width="7" height="7"></rect>
+            <rect x="3" y="14" width="7" height="7"></rect>
+        </svg>
+        <span class="sidebar-label">Power BI</span>
+    </button>
+
+    <!-- Vista 3: Análisis Interactivo -->
+    <button 
+        class="sidebar-btn" 
+        [class.active]="currentView === 'analisis'" 
+        (click)="navigateTo('analisis')"
+        title="📈 Análisis Interactivo">
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
             stroke="currentColor" stroke-width="2">
             <line x1="12" y1="20" x2="12" y2="10"></line>
             <line x1="18" y1="20" x2="18" y2="4"></line>
             <line x1="6" y1="20" x2="6" y2="16"></line>
         </svg>
+        <span class="sidebar-label">Streamlit</span>
     </button>
 
-    <button class="sidebar-btn" [class.active]="activeSection === 'chat'" (click)="selectSection('chat')" title="Chat">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-            stroke="currentColor" stroke-width="2">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-        </svg>
-    </button>
+    <div class="sidebar-divider"></div>
 
-    <button class="sidebar-btn" [class.active]="activeSection === 'settings'" (click)="selectSection('settings')"
-        title="Configuración">
+    <!-- Configuración -->
+    <button 
+        class="sidebar-btn" 
+        (click)="openSettings()"
+        title="⚙️ Configuración">
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
             stroke="currentColor" stroke-width="2">
             <circle cx="12" cy="12" r="3"></circle>
             <path d="M12 1v6m0 6v6m5.2-13.2l-4.2 4.2m0 6l4.2 4.2M23 12h-6m-6 0H1m18.2 5.2l-4.2-4.2m-6 0l-4.2 4.2">
             </path>
         </svg>
+        <span class="sidebar-label">Configuración</span>
     </button>
 </aside>

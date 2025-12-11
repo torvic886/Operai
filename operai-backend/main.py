@@ -9,6 +9,10 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 if __name__ == "__main__":
+    logger.info("=" * 60)
+    logger.info("   🚀 INICIANDO OPERAI BACKEND")
+    logger.info("=" * 60)
+    
     # Iniciar el watcher de archivos CSV
     csv_watch_path = os.getenv('CSV_WATCH_PATH', r'C:\agente\csv_uploads')
     
@@ -20,6 +24,17 @@ if __name__ == "__main__":
         logger.error(f"❌ Error iniciando watcher: {e}")
         logger.info("⚠️ La API seguirá funcionando sin el watcher automático")
     
+    logger.info("")
+    logger.info("📡 Endpoints disponibles:")
+    logger.info("   • FastAPI:   http://localhost:8000")
+    logger.info("   • Docs:      http://localhost:8000/docs")
+    logger.info("   • Chat IA:   http://localhost:8000/chat")
+    logger.info("")
+    logger.info("🎨 Para iniciar Streamlit:")
+    logger.info("   Windows:  run_streamlit.bat")
+    logger.info("   Linux:    ./run_streamlit.sh")
+    logger.info("")
+    logger.info("=" * 60)
+    
     # Iniciar FastAPI
-    logger.info("🚀 Iniciando FastAPI en http://0.0.0.0:8000")
     uvicorn.run(create_app(), host="0.0.0.0", port=8000)

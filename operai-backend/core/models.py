@@ -32,6 +32,9 @@ class PromedioCategoriaResponse(BaseModel):
 class RegistroItem(BaseModel):
     fecha: str
     monto: float
+    nombre_producto: Optional[str] = "Sin especificar"  
+    Categoria: Optional[str] = None                      
+    cantidad: Optional[float] = 1.0 
     proveedor: Optional[str] = None
     nro_factura: Optional[str] = None
 

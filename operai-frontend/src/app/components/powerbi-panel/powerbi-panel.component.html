@@ -1,0 +1,50 @@
+<!-- src/app/components/powerbi-panel/powerbi-panel.component.html -->
+<div class="results-panel">
+  <h2 class="panel-title">Dashboard Power BI</h2>
+
+  <div class="dashboard-section">
+    <div class="dashboard-header">
+      <h3 class="section-title">Dashboard de Visualización - Power BI</h3>
+      <button class="btn-fullscreen" (click)="openFullscreen()" title="Ver en pantalla completa">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
+             viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path
+            d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3">
+          </path>
+        </svg>
+        Pantalla completa
+      </button>
+    </div>
+
+    <div class="powerbi-container">
+      <iframe
+        [src]="powerBiUrl"
+        frameborder="0"
+        allowFullScreen="true"
+        class="powerbi-iframe">
+      </iframe>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Fullscreen -->
+<div class="modal-fullscreen" *ngIf="showFullscreen" (click)="closeFullscreen()">
+  <div class="modal-header">
+    <h2>Dashboard Power BI</h2>
+    <button class="btn-close" (click)="closeFullscreen()">
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"
+           viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="18" y1="6" x2="6" y2="18"></line>
+        <line x1="6" y1="6" x2="18" y2="18"></line>
+      </svg>
+    </button>
+  </div>
+  <div class="modal-body" (click)="$event.stopPropagation()">
+    <iframe
+      [src]="powerBiUrl"
+      frameborder="0"
+      allowFullScreen="true"
+      class="powerbi-iframe-fullscreen">
+    </iframe>
+  </div>
+</div>
